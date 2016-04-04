@@ -1,0 +1,17 @@
+{
+    "name": "mcfog/silo",
+    "description": "Silo Is a Lightweight ORM library",
+    "license": "ISC",
+    "authors": [
+        {
+            "name": "McFog Wang",
+            "email": "mcfogw@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Silo\\": "src"
+        }
+    },
+    "require": {}
+}
