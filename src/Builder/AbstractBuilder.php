@@ -1,6 +1,8 @@
 <?php namespace Silo\Builder;
 
 use ArrayObject;
+use Silo\Builtin\StaticConnectionFactory;
+use Silo\Interfaces\IConnectionFactory;
 use Silo\Interfaces\IDriver;
 
 /**
@@ -11,6 +13,7 @@ use Silo\Interfaces\IDriver;
  * @property array content
  * @property string fields
  * @property string table
+ * @property string db
  * @property string where
  * @property string order
  * @property int limit
@@ -19,7 +22,8 @@ use Silo\Interfaces\IDriver;
  */
 abstract class AbstractBuilder extends \ArrayObject
 {
-    const CONNECTION = 'default';
+    const CONNECTION = StaticConnectionFactory::CONNECTION_DEFAULT;
+
     protected static $pk = [];
 
     /**
@@ -39,6 +43,9 @@ abstract class AbstractBuilder extends \ArrayObject
         static::$connections[$name] = $driver;
     }
 
+    /**
+     * @return static
+     */
     public static function query()
     {
         return new static;
@@ -150,17 +157,20 @@ abstract class AbstractBuilder extends \ArrayObject
 
         return $driver->wrap($driver->comma($keys));
     }
-
+    
     /**
      * @return IDriver
      */
-    protected static function getDriver()
+    protected function getDriver()
     {
-        if (!isset(static::$connections[static::CONNECTION])) {
-            $msg = sprintf('cannot find silo connection <%s> for class %s', static::CONNECTION, static::class);
-            trigger_error($msg, E_USER_WARNING);
-        }
+        return static::getConnectionFactory()->getConnection($this);
+    }
 
-        return static::$connections[static::CONNECTION];
+    /**
+     * @return IConnectionFactory
+     */
+    protected static function getConnectionFactory()
+    {
+        return StaticConnectionFactory::instance();
     }
 }

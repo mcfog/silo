@@ -28,65 +28,60 @@ class PDODriver implements IDriver
 
     public function select(AbstractBuilder $builder)
     {
-        $data = $builder->getArrayCopy();
-        if (isset($data['fields'])) {
-            $sql = 'SELECT ' . $data['fields'];
+        if (isset($builder->fields)) {
+            $sql = 'SELECT ' . $builder->fields;
         } else {
             $sql = 'SELECT *';
         }
-        $sql .= sprintf(' FROM %s.%s ', $data['db'], $data['table']);
+        $sql .= sprintf(' FROM %s.%s ', $builder->db, $builder->table);
 
-        $sql = $this->appendWhere($data, $sql);
-        $sql = $this->appendOrder($data, $sql);
-        $sql = $this->appendLimit($data, $sql);
+        $sql = $this->appendWhere($builder, $sql);
+        $sql = $this->appendOrder($builder, $sql);
+        $sql = $this->appendLimit($builder, $sql);
 
-        $statement = $this->execute($sql, $data['params']);
+        $statement = $this->execute($sql, $builder->params);
 
         return $statement;
     }
 
     public function count(AbstractBuilder $builder)
     {
-        $data = $builder->getArrayCopy();
-        $sql = sprintf('SELECT COUNT(*) FROM %s.%s ', $data['db'], $data['table']);
+        $sql = sprintf('SELECT COUNT(*) FROM %s.%s ', $builder->db, $builder->table);
 
-        $sql = $this->appendWhere($data, $sql);
+        $sql = $this->appendWhere($builder, $sql);
 
-        $statement = $this->execute($sql, $data['params']);
+        $statement = $this->execute($sql, $builder->params);
 
         return (int)$statement->fetchColumn();
     }
 
     public function delete(AbstractBuilder $builder)
     {
-        $data = $builder->getArrayCopy();
+        $sql = sprintf('DELETE FROM %s.%s ', $builder->db, $builder->table);
 
-        $sql = sprintf('DELETE FROM %s.%s ', $data['db'], $data['table']);
+        $sql = $this->appendWhere($builder, $sql);
+        $sql = $this->appendOrder($builder, $sql);
+        $sql = $this->appendLimit($builder, $sql);
 
-        $sql = $this->appendWhere($data, $sql);
-        $sql = $this->appendOrder($data, $sql);
-        $sql = $this->appendLimit($data, $sql);
-
-        $statement = $this->execute($sql, $data['params']);
+        $statement = $this->execute($sql, $builder->params);
 
         return $statement->rowCount();
     }
 
     public function update(AbstractBuilder $builder)
     {
-        $data = $builder->getArrayCopy();
-        $sql = sprintf('UPDATE %s.%s SET ', $data['db'], $data['table']);
+        $sql = sprintf('UPDATE %s.%s SET ', $builder->db, $builder->table);
 
-        list($params, $part) = $this->makeAssignStatements($builder, $data['content']);
+        list($params, $part) = $this->makeAssignStatements($builder->content);
 
         $sql .= $part;
 
-        $sql = $this->appendWhere($data, $sql);
-        $sql = $this->appendOrder($data, $sql);
-        $sql = $this->appendLimit($data, $sql);
+        $sql = $this->appendWhere($builder, $sql);
+        $sql = $this->appendOrder($builder, $sql);
+        $sql = $this->appendLimit($builder, $sql);
 
-        if (isset($data['params'])) {
-            $params += $data['params'];
+        if (isset($builder->params)) {
+            $params += $builder->params;
         }
 
         $statement = $this->execute($sql, $params);
@@ -125,45 +120,45 @@ class PDODriver implements IDriver
     }
 
     /**
-     * @param $data
+     * @param AbstractBuilder $builder
      * @param $sql
      * @return string
      */
-    protected function appendWhere($data, $sql)
+    protected function appendWhere(AbstractBuilder $builder, $sql)
     {
-        if (isset($data['where'])) {
-            $sql .= ' WHERE ' . $data['where'];
+        if (isset($builder->where)) {
+            $sql .= ' WHERE ' . $builder->where;
         }
         return $sql;
     }
 
     /**
-     * @param $data
+     * @param AbstractBuilder $builder
      * @param $sql
      * @return string
      */
-    protected function appendOrder($data, $sql)
+    protected function appendOrder(AbstractBuilder $builder, $sql)
     {
-        if (isset($data['order'])) {
-            $sql .= ' ORDER BY ' . $data['order'];
+        if (isset($builder->order)) {
+            $sql .= ' ORDER BY ' . $builder->order;
         }
 
         return $sql;
     }
 
     /**
-     * @param $data
+     * @param AbstractBuilder $builder
      * @param $sql
      * @return string
      */
-    protected function appendLimit($data, $sql)
+    protected function appendLimit(AbstractBuilder $builder, $sql)
     {
-        if (isset($data['limit'])) {
+        if (isset($builder->limit)) {
             $sql .= ' LIMIT ';
-            if (isset($data['offset'])) {
-                $sql .= $data['offset'] . ',';
+            if (isset($builder->offset)) {
+                $sql .= $builder->offset . ',';
             }
-            $sql .= $data['limit'];
+            $sql .= $builder->limit;
         }
 
         return $sql;
@@ -206,11 +201,10 @@ class PDODriver implements IDriver
     }
 
     /**
-     * @param AbstractBuilder $builder
      * @param array $content
      * @return array
      */
-    protected function makeAssignStatements(AbstractBuilder $builder, array $content)
+    protected function makeAssignStatements(array $content)
     {
         $params = [];
         $updates = [];
@@ -232,22 +226,21 @@ class PDODriver implements IDriver
      */
     protected function _insert(AbstractBuilder $builder)
     {
-        $data = $builder->getArrayCopy();
         $params = [];
         $fields = [];
-        foreach ($data['content'] as $field => $value) {
+        foreach ($builder->content as $field => $value) {
             $key = ':v_' . count($params) . '_';
             $params[$key] = $value;
             $fields[$this->quote($field)] = $key;
         }
 
         $sql = sprintf('INSERT INTO %s.%s %s VALUES %s',
-            $data['db'],
-            $data['table'],
+            $builder->db,
+            $builder->table,
             $this->wrap($this->comma(array_keys($fields))),
             $this->wrap($this->comma(array_values($fields)))
         );
 
-        return $this->execute($sql, $params + $data['params']);
+        return $this->execute($sql, $params + $builder->params);
     }
 }

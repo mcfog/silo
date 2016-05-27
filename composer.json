@@ -13,7 +13,9 @@
             "Silo\\": "src"
         }
     },
-    "require": {},
+    "require": {
+        "php": ">=5.5.0"
+    },
     "extra": {
         "branch-alias": {
             "dev-master": "1.1.x-dev"
