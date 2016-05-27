@@ -4,20 +4,19 @@ use Silo\Interfaces\IModel;
 
 abstract class AbstractSchema extends AbstractBuilder
 {
-    public static function save(IModel $model)
+    public function save(IModel $model)
     {
-        $q = static::query();
         if ($model->isRowExists()) {
-            $q->content = $model->getRowDataForUpdate();
+            $this->content = $model->getRowDataForUpdate();
 
-            if (empty($q->content)) {
+            if (empty($this->content)) {
                 return 0;
             }
 
-            return $q->locate($model)->runUpdate();
+            return $this->locate($model)->runUpdate();
         } else {
-            $q->content = $model->getRowData();
-            return $model->onInserted($q->runInsert());
+            $this->content = $model->getRowData();
+            return $model->onInserted($this->runInsert());
         }
     }
 
@@ -62,11 +61,9 @@ abstract class AbstractSchema extends AbstractBuilder
         return $target;
     }
 
-    public static function remove(IModel $model)
+    public function remove(IModel $model)
     {
-        $q = static::query();
-
-        return $q->locate($model)->limit(1)->runDelete();
+        return $this->locate($model)->limit(1)->runDelete();
     }
 
     public function locateMulti(array $targets)

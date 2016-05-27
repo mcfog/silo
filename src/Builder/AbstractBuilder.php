@@ -26,31 +26,12 @@ abstract class AbstractBuilder extends \ArrayObject
 
     protected static $pk = [];
 
-    /**
-     * @var IDriver[]
-     */
-    protected static $connections = [];
-
     public function __construct($input = [])
     {
         parent::__construct($input + [
                 'params' => [],
             ], self::ARRAY_AS_PROPS);
     }
-
-    public static function setConnection(IDriver $driver, $name = 'default')
-    {
-        static::$connections[$name] = $driver;
-    }
-
-    /**
-     * @return static
-     */
-    public static function query()
-    {
-        return new static;
-    }
-
 
     public function runSelect()
     {
