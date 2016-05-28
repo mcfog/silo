@@ -201,8 +201,8 @@ class PDODriver implements IDriver
 
         if (!$success) {
             throw new \Exception(json_encode([
-                $statement->errorCode(),
-                $statement->errorInfo()
+                'errorCode' => $statement->errorCode(),
+                'errorInfo' => $statement->errorInfo(),
             ]));
         }
 
@@ -262,13 +262,8 @@ class PDODriver implements IDriver
     {
         switch ($this->pdoDriver) {
             case 'pgsql':
-                if (!empty($builder->db)) {
-                    if (!isset($this->dbName)) {
-                        $this->dbName = $this->pdo->query(' SELECT current_database()')->fetchColumn();
-                    }
-                    if ($this->dbName !== $builder->db) {
-                        throw new \RuntimeException('pgsql connection is not on this db:' . $builder->db);
-                    }
+                if (!empty($builder->db) && $this->getDbName() !== $builder->db) {
+                    throw new \RuntimeException('pgsql connection is not on this db:' . $builder->db);
                 }
 
                 return $builder->table;
@@ -276,5 +271,18 @@ class PDODriver implements IDriver
             default:
                 return implode('.', [$builder->db, $builder->table]);
         }
+    }
+
+    /**
+     * @return string
+     */
+    protected function getDbName()
+    {
+        if (!isset($this->dbName)) {
+            $this->dbName = $this->pdo->query(' SELECT current_database()')->fetchColumn();
+        }
+
+        $dbName = $this->dbName;
+        return $dbName;
     }
 }

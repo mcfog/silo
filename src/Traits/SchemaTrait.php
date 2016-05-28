@@ -88,18 +88,17 @@ trait SchemaTrait
     }
 
     /**
-     * @param string $sql,... sql segments
-     *
+     * @param string $sql,...
      * @return $this
      */
-    abstract function andWhere($sql);
+    abstract public function andWhere($sql);
 
     /**
      * @param string[] $values
      * @param string|null $keyPrefix
      * @return string
      */
-    abstract function params(array $values, $keyPrefix = null);
+    abstract public function params(array $values, $keyPrefix = null);
 
-    abstract function param($value, $key = null);
+    abstract public function param($value, $key = null);
 }

@@ -75,38 +75,45 @@ abstract class AbstractBuilder extends \ArrayObject
     }
 
     /**
-     * @param $args
+     * @param string $sql,...
      * @return $this
      */
-    public function where($args)
+    public function where()
     {
-        if (isset($this->where)) {
-            trigger_error('overriding where clause', E_USER_WARNING);
-        }
-        $this->where = implode(' ', func_get_args());
-
-        return $this;
+        return $this->setSqlStatement('order', func_get_args());
     }
 
-    public function andWhere($args)
+    /**
+     * @param string $sql,...
+     * @return $this
+     */
+    public function andWhere()
     {
-        $exp = implode(' ', func_get_args());
+        $sql = implode(' ', func_get_args());
         if (isset($this->where)) {
-            $this->where .= ' AND ' . $exp;
+            $this->where .= ' AND ' . $sql;
         } else {
-            $this->where = $exp;
+            $this->where = $sql;
         }
 
         return $this;
     }
 
-    public function order($args)
+    /**
+     * @param string $sql,...
+     * @return $this
+     */
+    public function order()
     {
-        if (isset($this->order)) {
-            trigger_error('overriding order clause', E_USER_WARNING);
+        return $this->setSqlStatement('order', func_get_args());
+    }
+
+    protected function setSqlStatement($part, array $sqls)
+    {
+        if (isset($this->{$part})) {
+            trigger_error("overriding {$part} clause", E_USER_WARNING);
         }
-        $args = func_get_args();
-        $this->order = implode(' ', $args);
+        $this->{$part} = implode(' ', $sqls);
 
         return $this;
     }
