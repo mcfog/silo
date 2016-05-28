@@ -6,9 +6,14 @@ use Silo\Interfaces\IDriver;
 
 class PDODriver implements IDriver
 {
-    const COMMA = ', ';
-    const QUOTE = '`%s`';
-    const PARENTHESIS = '(%s)';
+    /**
+     * @var string
+     */
+    protected $pdoDriver;
+    /**
+     * @var string
+     */
+    protected $dbName;
 
     /**
      * @var PDO
@@ -19,6 +24,7 @@ class PDODriver implements IDriver
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
+        $this->pdoDriver = $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
     }
 
     public function selectFirst(AbstractBuilder $builder)
@@ -33,7 +39,7 @@ class PDODriver implements IDriver
         } else {
             $sql = 'SELECT *';
         }
-        $sql .= sprintf(' FROM %s.%s ', $builder->db, $builder->table);
+        $sql .= sprintf(' FROM %s ', $this->makeFrom($builder));
 
         $sql = $this->appendWhere($builder, $sql);
         $sql = $this->appendOrder($builder, $sql);
@@ -46,7 +52,7 @@ class PDODriver implements IDriver
 
     public function count(AbstractBuilder $builder)
     {
-        $sql = sprintf('SELECT COUNT(*) FROM %s.%s ', $builder->db, $builder->table);
+        $sql = sprintf('SELECT COUNT(*) FROM %s ', $this->makeFrom($builder));
 
         $sql = $this->appendWhere($builder, $sql);
 
@@ -57,7 +63,7 @@ class PDODriver implements IDriver
 
     public function delete(AbstractBuilder $builder)
     {
-        $sql = sprintf('DELETE FROM %s.%s ', $builder->db, $builder->table);
+        $sql = sprintf('DELETE FROM %s ', $this->makeFrom($builder));
 
         $sql = $this->appendWhere($builder, $sql);
         $sql = $this->appendOrder($builder, $sql);
@@ -70,7 +76,7 @@ class PDODriver implements IDriver
 
     public function update(AbstractBuilder $builder)
     {
-        $sql = sprintf('UPDATE %s.%s SET ', $builder->db, $builder->table);
+        $sql = sprintf('UPDATE %s SET ', $this->makeFrom($builder));
 
         list($params, $part) = $this->makeAssignStatements($builder->content);
 
@@ -96,19 +102,28 @@ class PDODriver implements IDriver
         return $this->pdo->lastInsertId();
     }
 
-    public static function comma($values)
+    public function comma(array $values)
     {
-        return implode(static::COMMA, $values);
+        return implode(', ', $values);
     }
 
-    public static function wrap($inner)
+    public function wrap($inner)
     {
-        return sprintf(static::PARENTHESIS, $inner);
+        return sprintf('(%s)', $inner);
     }
 
-    public static function quote($inner)
+    public function quote($inner)
     {
-        return sprintf(static::QUOTE, $inner);
+        switch ($this->pdoDriver) {
+            case 'sqlite':
+                return sprintf('[%s]', $inner);
+            case 'pgsql':
+                return sprintf('"%s"', $inner);
+            case 'mysql':
+                return sprintf('`%s`', $inner);
+            default:
+                return $inner;
+        }
     }
 
     /**
@@ -234,13 +249,32 @@ class PDODriver implements IDriver
             $fields[$this->quote($field)] = $key;
         }
 
-        $sql = sprintf('INSERT INTO %s.%s %s VALUES %s',
-            $builder->db,
-            $builder->table,
+        $sql = sprintf('INSERT INTO %s %s VALUES %s',
+            $this->makeFrom($builder),
             $this->wrap($this->comma(array_keys($fields))),
             $this->wrap($this->comma(array_values($fields)))
         );
 
         return $this->execute($sql, $params + $builder->params);
+    }
+
+    protected function makeFrom(AbstractBuilder $builder)
+    {
+        switch ($this->pdoDriver) {
+            case 'pgsql':
+                if (!empty($builder->db)) {
+                    if (!isset($this->dbName)) {
+                        $this->dbName = $this->pdo->query(' SELECT current_database()')->fetchColumn();
+                    }
+                    if ($this->dbName !== $builder->db) {
+                        throw new \RuntimeException('pgsql connection is not on this db:' . $builder->db);
+                    }
+                }
+
+                return $builder->table;
+
+            default:
+                return implode('.', [$builder->db, $builder->table]);
+        }
     }
 }

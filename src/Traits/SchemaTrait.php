@@ -86,4 +86,20 @@ trait SchemaTrait
             return $this->andWhere($field, 'IN', $this->params($values));
         }
     }
+
+    /**
+     * @param string $sql,... sql segments
+     *
+     * @return $this
+     */
+    abstract function andWhere($sql);
+
+    /**
+     * @param string[] $values
+     * @param string|null $keyPrefix
+     * @return string
+     */
+    abstract function params(array $values, $keyPrefix = null);
+
+    abstract function param($value, $key = null);
 }

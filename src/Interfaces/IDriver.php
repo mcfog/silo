@@ -42,7 +42,21 @@ interface IDriver
      */
     public function insert(AbstractBuilder $builder, array $pk);
 
-    public static function comma($values);
-    public static function wrap($inner);
-    public static function quote($inner);
+    /**
+     * @param string[] $values
+     * @return string
+     */
+    public function comma(array $values);
+
+    /**
+     * @param string $inner
+     * @return string
+     */
+    public function wrap($inner);
+
+    /**
+     * @param string $inner
+     * @return string
+     */
+    public function quote($inner);
 }
