@@ -6,6 +6,7 @@ use Silo\Interfaces\IDriver;
 
 class PDODriver implements IDriver
 {
+    const DRIVER_PGSQL = 'pgsql';
     /**
      * @var string
      */
@@ -19,7 +20,6 @@ class PDODriver implements IDriver
      * @var PDO
      */
     protected $pdo;
-    protected $param;
 
     public function __construct(PDO $pdo)
     {
@@ -97,9 +97,18 @@ class PDODriver implements IDriver
 
     public function insert(AbstractBuilder $builder, array $pk)
     {
-        $this->_insert($builder);
+        $statement = $this->_insert($builder, $pk);
 
-        return $this->pdo->lastInsertId();
+        switch ($this->pdoDriver) {
+            case self::DRIVER_PGSQL:
+                if (count($pk) === 1) {
+                    return $statement->fetchColumn();
+                }
+
+                return null;
+            default:
+                return $this->pdo->lastInsertId();
+        }
     }
 
     public function comma(array $values)
@@ -117,21 +126,13 @@ class PDODriver implements IDriver
         switch ($this->pdoDriver) {
             case 'sqlite':
                 return sprintf('[%s]', $inner);
-            case 'pgsql':
+            case self::DRIVER_PGSQL:
                 return sprintf('"%s"', $inner);
             case 'mysql':
                 return sprintf('`%s`', $inner);
             default:
                 return $inner;
         }
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getOutParam()
-    {
-        return $this->param;
     }
 
     /**
@@ -189,12 +190,8 @@ class PDODriver implements IDriver
     {
         $statement = $this->pdo->prepare($sql);
         $statement->setFetchMode(PDO::FETCH_ASSOC);
-        foreach ($params as $key => &$value) {
-            if (substr($key, 0, 3) === ':o_') {
-                $statement->bindParam($key, $value, PDO::PARAM_INPUT_OUTPUT, 255);
-            } else {
-                $statement->bindValue($key, $value);
-            }
+        foreach ($params as $key => $value) {
+            $statement->bindValue($key, $value);
         }
 
         $success = $statement->execute();
@@ -204,12 +201,6 @@ class PDODriver implements IDriver
                 'errorCode' => $statement->errorCode(),
                 'errorInfo' => $statement->errorInfo(),
             ]));
-        }
-
-        //$params的out参数有引用，这里通过copy一次的方式解除引用
-        $this->param = [];
-        foreach ($params as $k => $v) {
-            $this->param[$k] = $v;
         }
 
         return $statement;
@@ -239,7 +230,7 @@ class PDODriver implements IDriver
      * @return \PDOStatement
      * @throws \Exception
      */
-    protected function _insert(AbstractBuilder $builder)
+    protected function _insert(AbstractBuilder $builder, array $pk)
     {
         $params = [];
         $fields = [];
@@ -255,13 +246,24 @@ class PDODriver implements IDriver
             $this->wrap($this->comma(array_values($fields)))
         );
 
+        switch ($this->pdoDriver) {
+            case self::DRIVER_PGSQL:
+                $sql .= implode(',', array_map(function($key) {
+                    return ' RETURNING ' . $key;
+                }, $pk));
+
+                break;
+            default:
+                break;
+        }
+
         return $this->execute($sql, $params + $builder->params);
     }
 
     protected function makeFrom(AbstractBuilder $builder)
     {
         switch ($this->pdoDriver) {
-            case 'pgsql':
+            case self::DRIVER_PGSQL:
                 if (!empty($builder->db) && $this->getDbName() !== $builder->db) {
                     throw new \RuntimeException('pgsql connection is not on this db:' . $builder->db);
                 }
