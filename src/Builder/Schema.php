@@ -1,5 +1,6 @@
 <?php namespace Silo\Builder;
 use Silo\Interfaces\IModel;
+use Silo\Traits\SchemaTrait;
 
 /**
  * User: mcfog
@@ -7,6 +8,8 @@ use Silo\Interfaces\IModel;
  */
 class Schema extends AbstractSchema
 {
+    use SchemaTrait;
+
     /**
      * @var string
      */
@@ -45,6 +48,6 @@ class Schema extends AbstractSchema
 
     protected function getHydrator()
     {
-        return [$this->modelName, 'hydrator'];
+        return [$this->modelName, 'hydrate'];
     }
 }

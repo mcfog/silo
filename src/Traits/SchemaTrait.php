@@ -1,6 +1,6 @@
 <?php namespace Silo\Traits;
 
-class SchemaTrait
+trait SchemaTrait
 {
     /**
      * @param $field
