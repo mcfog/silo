@@ -78,7 +78,7 @@ abstract class AbstractBuilder extends \ArrayObject
      * @param string $sql,...
      * @return $this
      */
-    public function where()
+    public function where($sql)
     {
         return $this->setSqlStatement('order', func_get_args());
     }
@@ -87,7 +87,7 @@ abstract class AbstractBuilder extends \ArrayObject
      * @param string $sql,...
      * @return $this
      */
-    public function andWhere()
+    public function andWhere($sql)
     {
         $sql = implode(' ', func_get_args());
         if (isset($this->where)) {
@@ -103,7 +103,7 @@ abstract class AbstractBuilder extends \ArrayObject
      * @param string $sql,...
      * @return $this
      */
-    public function order()
+    public function order($sql)
     {
         return $this->setSqlStatement('order', func_get_args());
     }
