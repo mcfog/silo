@@ -59,4 +59,10 @@ interface IDriver
      * @return string
      */
     public function quote($inner);
+
+    /**
+     * @param callable $callback
+     * @return mixed
+     */
+    public function runTransation(callable $callback);
 }

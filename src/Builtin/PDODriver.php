@@ -287,4 +287,21 @@ class PDODriver implements IDriver
         $dbName = $this->dbName;
         return $dbName;
     }
+
+    public function runTransation(callable $callback)
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $result = call_user_func($callback);
+        } catch (\Exception $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+
+        if (false === $this->pdo->commit()) {
+            throw new \PDOException('transaction failed to commit');
+        }
+
+        return $result;
+    }
 }
